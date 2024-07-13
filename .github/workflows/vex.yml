@@ -1,0 +1,37 @@
+permissions:
+  id-token: write # This is required for requesting the JWT
+  contents: read  # This is required for actions/checkout
+
+name: vex
+
+on:
+  workflow_dispatch
+
+jobs:
+  generate-vex:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Setup Go
+      uses: actions/setup-go@v5.0.0
+      with:
+        go-version: 1.22.x
+    - run: go install github.com/openvex/vexctl@latest
+
+    - name: Checkout Code
+      uses: actions/checkout@v4.1.1
+    
+    - name: Generate VEX
+      uses: testifysec/witness-run-action@reusable-workflow # v0.2.0
+      with:
+        archivista-server: "https://judge-api.aws-sandbox-staging.testifysec.dev"
+        step: gen-vex
+        attestations: "environment git github vex"
+        command: |
+          /bin/sh -c 'vexctl create --product="pkg:oci/${{ github.repository }}@main" --vuln="CVE-2023-45285" --status="not_affected" --justification="inline_mitigations_already_exist" --file="./openvex.json"'
+
+    - name: Upload VEX
+      uses: actions/upload-artifact@v4.3.3
+      with:
+        name: vex
+        path: openvex.json
