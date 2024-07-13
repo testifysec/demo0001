@@ -39,15 +39,22 @@ jobs:
       uses: actions/checkout@v4.1.1
     
     - name: Build Image
-      shell: bash
-      run: |
-        docker buildx build -t ${{ steps.meta.outputs.tags }} --push .
+      uses: testifysec/witness-run-action@reusable-workflow # v0.2.0
+      with:
+        archivista-server: "https://judge-api.aws-sandbox-staging.testifysec.dev"
+        step: build-image
+        attestations: "environment git github slsa"
+        command: /bin/sh -c "docker buildx build -t ${{ steps.meta.outputs.tags }} --push ."
 
     - name: Generate SBOM
-      shell: bash
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-        syft ${{ steps.meta.outputs.tags }} --source-name=pkg:oci/${{ github.repository }} -o cyclonedx-json --file sbom.cdx.json
+      uses: testifysec/witness-run-action@reusable-workflow # v0.2.0
+      with:
+        archivista-server: "https://judge-api.aws-sandbox-staging.testifysec.dev"
+        step: gen-sbom
+        attestations: "environment git github sbom"
+        command: |
+          /bin/sh -c "curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.7.0 && \
+            syft ${{ steps.meta.outputs.tags }} --source-name=pkg:oci/${{ github.repository }} -o cyclonedx-json --file sbom.cdx.json"
 
     - name: Upload SBOM
       uses: actions/upload-artifact@v4.3.3
