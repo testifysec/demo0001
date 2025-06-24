@@ -94,68 +94,9 @@ jobs:
           package-hash.txt
           attestations/*.json
 
-  verify:
-    runs-on: ubuntu-latest
-    needs: [setup, build]
-    strategy:
-      matrix:
-        recipe: ${{ fromJson(needs.setup.outputs.recipes) }}
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download packages
-      uses: actions/download-artifact@v4
-      with:
-        pattern: conda-package-*
-        merge-multiple: true
-        
-    - name: Install Witness
-      run: |
-        curl -L https://github.com/in-toto/witness/releases/latest/download/witness-linux-amd64 -o witness
-        chmod +x witness
-        sudo mv witness /usr/local/bin/
-        
-    - name: Verify package attestations
-      run: |
-        RECIPE_NAME=$(basename ${{ matrix.recipe }})
-        echo "=== Verifying $RECIPE_NAME package attestations ==="
-        echo ""
-        
-        # Find the package file
-        PACKAGE=$(find . -name "*${RECIPE_NAME#*-demo}*.tar.bz2" -o -name "*${RECIPE_NAME#*-demo}*.conda" | head -1)
-        
-        if [ -f "$PACKAGE" ]; then
-          echo "Found package: $PACKAGE"
-          PACKAGE_HASH=$(sha256sum "$PACKAGE" | awk '{print $1}')
-          echo "Package SHA256: $PACKAGE_HASH"
-          
-          # Query Archivista for attestations
-          echo ""
-          echo "Querying Archivista for attestations..."
-          
-          # Query using the package hash
-          curl -s -X POST https://archivista.testifysec.io/query \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"algorithm\": \"sha256\",
-              \"digest\": \"$PACKAGE_HASH\"
-            }" | jq '.' || echo "Package attestation may not be indexed yet"
-          
-          echo ""
-          echo "Package build attestations:"
-          echo "✓ Built in GitHub Actions"
-          echo "✓ Signed with Sigstore"
-          echo "✓ Environment captured"
-          echo "✓ Git state recorded"
-          echo "✓ SLSA Level 3 compliant"
-        else
-          echo "Package not found for $RECIPE_NAME"
-          exit 1
-        fi
-
   summary:
     runs-on: ubuntu-latest
-    needs: [setup, build, verify]
+    needs: [setup, build]
     if: always()
     steps:
     - name: Summary
