@@ -28,16 +28,12 @@ jobs:
     strategy:
       matrix:
         recipe: ${{ fromJson(needs.setup.outputs.recipes) }}
-    uses: testifysec/witness-run-action/.github/workflows/witness.yml@reusable-workflow
+    uses: testifysec/witness-run-action/.github/workflows/witness.yml@main
     with:
       pull_request: ${{ github.event_name == 'pull_request' }}
       step: conda-build-${{ matrix.recipe }}
       attestations: "git github environment system-packages secretscan"
       archivista-server: "https://archivista.testifysec.io"
-      enable-archivista: true
-      trace: true
-      # Use Sigstore for signing
-      signer: "sigstore"
       pre-command: |
         # Install miniconda
         wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
