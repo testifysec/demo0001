@@ -63,11 +63,18 @@ jobs:
         step: build-${{ env.RECIPE_NAME }}
         attestations: "git github environment"
         command: |
+          echo "=== Working directory: $(pwd) ==="
+          echo "=== Directory structure before build ==="
+          ls -la
+          
           conda build ${{ matrix.recipe }} --croot ./conda-bld
           
-          # List built packages
-          echo "Built packages:"
-          find ./conda-bld -type f \( -name "*.tar.bz2" -o -name "*.conda" \) | grep -v repodata | grep -v index
+          echo "=== Directory structure after build ==="
+          ls -la
+          echo "=== Contents of conda-bld ==="
+          find ./conda-bld -type f -name "*.conda" -o -name "*.tar.bz2" | head -20
+          echo "=== Package locations ==="
+          find . -name "*.conda" -o -name "*.tar.bz2" | grep -v "conda-bld/.*_.*" | head -10
         enable-sigstore: true
         enable-archivista: true
         archivista-server: "https://web.platform.testifysec.com"
