@@ -49,15 +49,17 @@ jobs:
         conda install conda-build
         conda info
         
-    - name: Create output directory
-      run: mkdir -p attestations
+    - name: Setup build environment
+      run: |
+        mkdir -p attestations
+        echo "RECIPE_NAME=$(basename ${{ matrix.recipe }})" >> $GITHUB_ENV
       
     - name: Build with Witness
       uses: testifysec/witness-run-action@v0.3.0
       with:
-        step: build-${{ matrix.recipe }}
+        step: build-${{ env.RECIPE_NAME }}
         attestations: "git github environment"
-        outfile: attestations/${{ matrix.recipe }}-attestation.json
+        outfile: attestations/${{ env.RECIPE_NAME }}-attestation.json
         command: |
           echo "Building recipe: ${{ matrix.recipe }}"
           conda build ${{ matrix.recipe }}
