@@ -91,7 +91,7 @@ jobs:
           Authorization: Token ${{ secrets.PLATFORM_API_TOKEN }}
         trace: false
         product-include-glob: "**"
-        slsa-export: true
+        attestor-slsa-export: true
         
     - name: Upload package
       uses: actions/upload-artifact@v4

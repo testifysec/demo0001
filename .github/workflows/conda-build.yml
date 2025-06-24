@@ -89,7 +89,7 @@ jobs:
         archivista-server: "https://archivista.testifysec.io"
         trace: true
         product-include-glob: "**"
-        slsa-export: true
+        attestor-slsa-export: true
         
     - name: Upload package
       uses: actions/upload-artifact@v4
