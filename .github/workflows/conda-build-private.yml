@@ -67,7 +67,7 @@ jobs:
           
           # List built packages
           echo "Built packages:"
-          find ./conda-bld -name "*.tar.bz2" -o -name "*.conda" | grep -v repodata | grep -v index
+          find ./conda-bld -type f \( -name "*.tar.bz2" -o -name "*.conda" \) | grep -v repodata | grep -v index
         enable-sigstore: true
         enable-archivista: true
         archivista-server: "https://web.platform.testifysec.com"
@@ -82,6 +82,8 @@ jobs:
         path: |
           conda-bld/**/*.tar.bz2
           conda-bld/**/*.conda
+          conda-bld/noarch/*.tar.bz2
+          conda-bld/noarch/*.conda
           attestations/*.json
 
   summary:
