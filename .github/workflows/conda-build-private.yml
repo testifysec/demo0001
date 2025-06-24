@@ -60,23 +60,7 @@ jobs:
         step: build-${{ env.RECIPE_NAME }}
         attestations: "git github environment"
         command: |
-          echo "Building recipe: ${{ matrix.recipe }}"
           conda build ${{ matrix.recipe }}
-          
-          # Find and display the built package
-          PACKAGE=$(find $HOME/miniconda/conda-bld -name "*.tar.bz2" -o -name "*.conda" | grep -v repodata | grep -v index | head -1)
-          echo "Built package: $PACKAGE"
-          
-          # Save package info for later verification
-          if [ -f "$PACKAGE" ]; then
-            PACKAGE_NAME=$(basename "$PACKAGE")
-            echo "Package name: $PACKAGE_NAME"
-            echo "Package size: $(ls -lh "$PACKAGE" | awk '{print $5}')"
-            echo "Package hash: $(sha256sum "$PACKAGE" | awk '{print $1}')"
-            
-            echo "$PACKAGE_NAME" > package-name.txt
-            sha256sum "$PACKAGE" > package-hash.txt
-          fi
         enable-sigstore: true
         enable-archivista: true
         archivista-server: "https://web.platform.testifysec.com"
