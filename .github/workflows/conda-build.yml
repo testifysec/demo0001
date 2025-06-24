@@ -49,11 +49,15 @@ jobs:
         conda install conda-build
         conda info
         
+    - name: Create output directory
+      run: mkdir -p attestations
+      
     - name: Build with Witness
       uses: testifysec/witness-run-action@v0.3.0
       with:
         step: build-${{ matrix.recipe }}
         attestations: "git github environment"
+        outfile: attestations/${{ matrix.recipe }}-attestation.json
         command: |
           echo "Building recipe: ${{ matrix.recipe }}"
           conda build ${{ matrix.recipe }}
@@ -76,6 +80,7 @@ jobs:
         enable-archivista: true
         archivista-server: "https://archivista.testifysec.io"
         trace: true
+        workingdir: ${{ github.workspace }}
         
     - name: Upload package
       uses: actions/upload-artifact@v4
@@ -86,6 +91,7 @@ jobs:
           ~/miniconda/conda-bld/**/*.conda
           package-name.txt
           package-hash.txt
+          attestations/*.json
 
   verify:
     runs-on: ubuntu-latest
