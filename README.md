@@ -45,11 +45,14 @@ The workflow uses a matrix strategy to build multiple packages in parallel with 
 1. **Setup Job**: Finds all recipes (click, pyyaml, requests)
 2. **Build Job**: 
    - Uses Sigstore for ephemeral signing keys
-   - Captures multiple attestations: git, github, environment, system-packages, secretscan
-   - Stores attestations in public Archivista
+   - Captures multiple attestations: git, github, environment
+   - Stores attestations in Archivista (public or private instance)
    - Enables tracing for debugging
-3. **Verify Job**: Queries Archivista for attestations
-4. **Summary Job**: Reports build status with security details
+3. **Summary Job**: Reports build status with security details
+
+Two workflow variants are available:
+- `conda-build.yml` - Uses public Archivista instance
+- `conda-build-private.yml` - Uses TestifySec Platform with API authentication
 
 ## Local Commands
 
