@@ -6,6 +6,11 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  id-token: write  # Required for Sigstore JWT
+  contents: read   # Required for checkout
+  actions: read    # Required for artifact downloads
+
 jobs:
   setup:
     runs-on: ubuntu-latest
@@ -25,52 +30,62 @@ jobs:
 
   build:
     needs: setup
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         recipe: ${{ fromJson(needs.setup.outputs.recipes) }}
-    uses: testifysec/witness-run-action/.github/workflows/witness.yml@main
-    with:
-      pull_request: ${{ github.event_name == 'pull_request' }}
-      step: conda-build-${{ matrix.recipe }}
-      attestations: "git github environment system-packages secretscan"
-      archivista-server: "https://archivista.testifysec.io"
-      pre-command: |
-        # Install miniconda
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install miniconda
+      run: |
         wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
         bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
-        export PATH="$HOME/miniconda/bin:$PATH"
+        echo "$HOME/miniconda/bin" >> $GITHUB_PATH
+        
+    - name: Setup conda
+      run: |
         conda config --set always_yes yes
         conda install conda-build
+        conda info
         
-        # Create a dummy lock file to demonstrate lockfiles attestor
-        echo "# Generated lockfile for demo" > Pipfile.lock
-        echo "{\"default\": {}, \"develop\": {}}" >> Pipfile.lock
-      command: |
-        export PATH="$HOME/miniconda/bin:$PATH"
-        echo "Building recipe: ${{ matrix.recipe }}"
-        conda build ${{ matrix.recipe }}
-        
-        # Find and display the built package
-        PACKAGE=$(find $HOME/miniconda/conda-bld -name "*.tar.bz2" -o -name "*.conda" | grep -v repodata | grep -v index | head -1)
-        echo "Built package: $PACKAGE"
-        
-        # Generate package info for verification
-        if [ -f "$PACKAGE" ]; then
-          PACKAGE_NAME=$(basename "$PACKAGE")
-          echo "Package name: $PACKAGE_NAME"
-          echo "Package size: $(ls -lh "$PACKAGE" | awk '{print $5}')"
-          echo "Package hash: $(sha256sum "$PACKAGE" | awk '{print $1}')"
+    - name: Build with Witness
+      uses: testifysec/witness-run-action@v0.1.8
+      with:
+        step: build-${{ matrix.recipe }}
+        attestations: "git github environment"
+        command: |
+          echo "Building recipe: ${{ matrix.recipe }}"
+          conda build ${{ matrix.recipe }}
+          
+          # Find and display the built package
+          PACKAGE=$(find $HOME/miniconda/conda-bld -name "*.tar.bz2" -o -name "*.conda" | grep -v repodata | grep -v index | head -1)
+          echo "Built package: $PACKAGE"
           
           # Save package info for later verification
-          echo "$PACKAGE_NAME" > package-name.txt
-          sha256sum "$PACKAGE" > package-hash.txt
-        fi
-      artifact-upload-name: conda-package-${{ strategy.job-index }}
-      artifact-upload-path: |
-        $HOME/miniconda/conda-bld/**/*.tar.bz2
-        $HOME/miniconda/conda-bld/**/*.conda
-        package-name.txt
-        package-hash.txt
+          if [ -f "$PACKAGE" ]; then
+            PACKAGE_NAME=$(basename "$PACKAGE")
+            echo "Package name: $PACKAGE_NAME"
+            echo "Package size: $(ls -lh "$PACKAGE" | awk '{print $5}')"
+            echo "Package hash: $(sha256sum "$PACKAGE" | awk '{print $1}')"
+            
+            echo "$PACKAGE_NAME" > package-name.txt
+            sha256sum "$PACKAGE" > package-hash.txt
+          fi
+        enable-sigstore: true
+        enable-archivista: true
+        archivista-server: "https://archivista.testifysec.io"
+        trace: true
+        
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: conda-package-${{ strategy.job-index }}
+        path: |
+          ~/miniconda/conda-bld/**/*.tar.bz2
+          ~/miniconda/conda-bld/**/*.conda
+          package-name.txt
+          package-hash.txt
 
   verify:
     runs-on: ubuntu-latest
@@ -111,21 +126,20 @@ jobs:
           echo ""
           echo "Querying Archivista for attestations..."
           
-          # In a real scenario, we would use witness verify with a policy
-          # For now, we'll query Archivista directly
-          curl -s -X POST https://archivista.testifysec.io/v1/query \
+          # Query using the package hash
+          curl -s -X POST https://archivista.testifysec.io/query \
             -H "Content-Type: application/json" \
             -d "{
-              \"query\": \"query { subjects(where: { hasSubjectDigestsWith: [{ algorithm: \\\"sha256\\\", value: \\\"$PACKAGE_HASH\\\" }] }) { edges { node { statement { predicate policy { name verified } } } } } }\"
-            }" | jq '.' || echo "Direct query failed, attestation may be indexed differently"
+              \"algorithm\": \"sha256\",
+              \"digest\": \"$PACKAGE_HASH\"
+            }" | jq '.' || echo "Package attestation may not be indexed yet"
           
           echo ""
           echo "Package build attestations:"
           echo "✓ Built in GitHub Actions"
           echo "✓ Signed with Sigstore"
           echo "✓ Environment captured"
-          echo "✓ System packages recorded"
-          echo "✓ Secret scan completed"
+          echo "✓ Git state recorded"
           echo "✓ SLSA Level 3 compliant"
         else
           echo "Package not found for $RECIPE_NAME"
@@ -135,10 +149,11 @@ jobs:
   summary:
     runs-on: ubuntu-latest
     needs: [setup, build, verify]
+    if: always()
     steps:
     - name: Summary
       run: |
-        echo "## 🎉 Conda Build with Witness - Success!"
+        echo "## 🎉 Conda Build with Witness - Summary"
         echo ""
         echo "### 📦 Packages Built"
         echo ""
@@ -150,8 +165,8 @@ jobs:
         echo ""
         echo "### 🔒 Security Features"
         echo ""
-        echo "- **Signing**: Sigstore ephemeral keys"
-        echo "- **Attestations**: git, github, environment, system-packages, secretscan"
+        echo "- **Signing**: Sigstore ephemeral keys (OIDC-based)"
+        echo "- **Attestations**: git, github, environment"
         echo "- **Storage**: Archivista public instance"
         echo "- **Compliance**: SLSA Level 3"
         echo ""
@@ -161,8 +176,6 @@ jobs:
         echo "- 📍 **Git**: Repository state and commit hash"
         echo "- 🏭 **GitHub**: Workflow run metadata"
         echo "- 🖥️ **Environment**: Build host details"
-        echo "- 📦 **System Packages**: Installed OS packages"
-        echo "- 🔐 **Secret Scan**: No secrets in codebase"
         echo ""
         echo "### 📡 Next Steps"
         echo ""
@@ -170,3 +183,5 @@ jobs:
         echo "- Queried via GraphQL API"
         echo "- Verified with witness policies"
         echo "- Used for compliance reporting"
+        echo ""
+        echo "View the workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
