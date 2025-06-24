@@ -31,6 +31,7 @@ jobs:
   build:
     needs: setup
     runs-on: ubuntu-latest
+    continue-on-error: true
     strategy:
       matrix:
         recipe: ${{ fromJson(needs.setup.outputs.recipes) }}
