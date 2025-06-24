@@ -50,7 +50,7 @@ jobs:
         conda info
         
     - name: Build with Witness
-      uses: testifysec/witness-run-action@v0.1.5
+      uses: testifysec/witness-run-action@v0.3.0
       with:
         step: build-${{ matrix.recipe }}
         attestations: "git github environment"
