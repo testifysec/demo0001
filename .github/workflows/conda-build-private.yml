@@ -90,6 +90,7 @@ jobs:
         archivista-headers: |-
           Authorization: Token ${{ secrets.PLATFORM_API_TOKEN }}
         trace: false
+        product-include-glob: "**"
         
     - name: Upload package
       uses: actions/upload-artifact@v4
