@@ -58,8 +58,7 @@ jobs:
       uses: testifysec/witness-run-action@v0.3.0
       with:
         step: build-${{ env.RECIPE_NAME }}
-        attestations: "git github environment"
-        outfile: attestations/${{ env.RECIPE_NAME }}-attestation.json
+        attestations: "git github environment secret-scan"
         command: |
           echo "Building recipe: ${{ matrix.recipe }}"
           conda build ${{ matrix.recipe }}
