@@ -10,6 +10,7 @@ This demo shows:
 3. SLSA Level 3 compliance
 4. Policy enforcement
 5. Package verification workflow
+6. Integration with TestifySec Platform (private Archivista)
 
 ## Prerequisites
 
