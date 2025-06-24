@@ -57,24 +57,33 @@ jobs:
         echo "RECIPE_NAME=$(basename ${{ matrix.recipe }})" >> $GITHUB_ENV
         echo "CONDA_BLD_PATH=${{ github.workspace }}/conda-bld" >> $GITHUB_ENV
       
+    - name: Create build script
+      run: |
+        cat > build-conda-package.sh << 'EOF'
+        #!/bin/bash
+        set -e
+        
+        echo "=== Working directory: $(pwd) ==="
+        echo "=== Directory structure before build ==="
+        ls -la
+        
+        conda build $1 --croot ./conda-bld
+        
+        echo "=== Directory structure after build ==="
+        ls -la
+        echo "=== Contents of conda-bld ==="
+        find ./conda-bld -type f -name "*.conda" -o -name "*.tar.bz2" | head -20
+        echo "=== Package locations ==="
+        find . -name "*.conda" -o -name "*.tar.bz2" | grep -v "conda-bld/.*_.*" | head -10
+        EOF
+        chmod +x build-conda-package.sh
+        
     - name: Build with Witness
       uses: testifysec/witness-run-action@v0.3.0
       with:
         step: build-${{ env.RECIPE_NAME }}
         attestations: "git github environment"
-        command: |
-          echo "=== Working directory: $(pwd) ==="
-          echo "=== Directory structure before build ==="
-          ls -la
-          
-          conda build ${{ matrix.recipe }} --croot ./conda-bld
-          
-          echo "=== Directory structure after build ==="
-          ls -la
-          echo "=== Contents of conda-bld ==="
-          find ./conda-bld -type f -name "*.conda" -o -name "*.tar.bz2" | head -20
-          echo "=== Package locations ==="
-          find . -name "*.conda" -o -name "*.tar.bz2" | grep -v "conda-bld/.*_.*" | head -10
+        command: ./build-conda-package.sh ${{ matrix.recipe }}
         enable-sigstore: true
         enable-archivista: true
         archivista-server: "https://archivista.testifysec.io"
