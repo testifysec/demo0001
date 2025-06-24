@@ -53,7 +53,9 @@ jobs:
     - name: Setup build environment
       run: |
         mkdir -p attestations
+        mkdir -p conda-bld
         echo "RECIPE_NAME=$(basename ${{ matrix.recipe }})" >> $GITHUB_ENV
+        echo "CONDA_BLD_PATH=${{ github.workspace }}/conda-bld" >> $GITHUB_ENV
       
     - name: Build with Witness
       uses: testifysec/witness-run-action@v0.3.0
@@ -61,29 +63,24 @@ jobs:
         step: build-${{ env.RECIPE_NAME }}
         attestations: "git github environment"
         command: |
-          conda build ${{ matrix.recipe }}
+          conda build ${{ matrix.recipe }} --croot ./conda-bld
           
-          # Copy built package to working directory for attestation
-          PACKAGE=$(find $HOME/miniconda/conda-bld -name "*.tar.bz2" -o -name "*.conda" | grep -v repodata | grep -v index | head -1)
-          if [ -f "$PACKAGE" ]; then
-            cp "$PACKAGE" .
-            echo "Package copied to: $(basename "$PACKAGE")"
-          fi
+          # List built packages
+          echo "Built packages:"
+          find ./conda-bld -name "*.tar.bz2" -o -name "*.conda" | grep -v repodata | grep -v index
         enable-sigstore: true
         enable-archivista: true
         archivista-server: "https://archivista.testifysec.io"
         trace: true
-        product-include-glob: "*.tar.bz2,*.conda,/home/runner/miniconda/conda-bld/**/*.tar.bz2,/home/runner/miniconda/conda-bld/**/*.conda"
+        product-include-glob: "**/*.tar.bz2,**/*.conda"
         
     - name: Upload package
       uses: actions/upload-artifact@v4
       with:
         name: conda-package-${{ strategy.job-index }}
         path: |
-          ~/miniconda/conda-bld/**/*.tar.bz2
-          ~/miniconda/conda-bld/**/*.conda
-          package-name.txt
-          package-hash.txt
+          conda-bld/**/*.tar.bz2
+          conda-bld/**/*.conda
           attestations/*.json
 
   summary:
