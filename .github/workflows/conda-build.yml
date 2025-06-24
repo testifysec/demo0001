@@ -1,0 +1,118 @@
+name: Conda Build with Witness
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-with-attestations:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      id-token: write  # For OIDC/Sigstore
+      contents: read
+      
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: 3.9
+        
+    - name: Install Witness
+      run: |
+        curl -L https://github.com/in-toto/witness/releases/latest/download/witness-linux-amd64 -o witness
+        chmod +x witness
+        sudo mv witness /usr/local/bin/
+        witness version
+        
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+        aws-region: us-east-1
+        
+    - name: Build numpy with attestations
+      run: |
+        echo "Building conda package with Witness attestations..."
+        
+        # Create simple test recipe
+        mkdir -p recipe
+        cat > recipe/meta.yaml <<EOF
+        package:
+          name: numpy-demo
+          version: "1.24.3"
+        
+        source:
+          url: https://pypi.io/packages/source/n/numpy/numpy-1.24.3.tar.gz
+          sha256: ab344f1bf21f140adab8e47fdbc7c35a477dc01408791f8ba00d018dd0bc5155
+        
+        build:
+          number: 0
+          script: "echo 'Demo build'"
+        
+        requirements:
+          build:
+            - python
+          run:
+            - python
+        EOF
+        
+        # Run build with Witness
+        witness run \
+          --step build \
+          --attestations "environment,git,github" \
+          --enable-sigstore \
+          --outfile build-attestation.json \
+          -- conda build recipe/
+          
+    - name: Upload attestations
+      uses: actions/upload-artifact@v3
+      with:
+        name: attestations
+        path: |
+          build-attestation.json
+          
+    - name: Verify build
+      run: |
+        # Create policy
+        cat > policy.yaml <<EOF
+        expires: "2030-01-01T00:00:00Z"
+        steps:
+          - name: "build"
+            attestations:
+              - type: "https://witness.dev/attestations/github/v0.1"
+              - type: "https://witness.dev/attestations/environment/v0.1"
+        roots:
+          - certificate: |
+              -----BEGIN CERTIFICATE-----
+              # Sigstore root cert would go here
+              -----END CERTIFICATE-----
+        EOF
+        
+        # Sign policy
+        witness sign -f policy.yaml -o policy-signed.json --enable-sigstore
+        
+        # Verify
+        witness verify \
+          --policy policy-signed.json \
+          --attestation build-attestation.json
+          
+    - name: Query attestations (simulation)
+      run: |
+        echo "In production, attestations would be queryable via GraphQL:"
+        echo ""
+        echo "query {"
+        echo "  subjects(where: {"
+        echo "    hasSubjectDigestsWith: [{"
+        echo "      value: \"\$(sha256sum conda-bld/linux-64/*.tar.bz2 | cut -d' ' -f1)\""
+        echo "    }]"
+        echo "  }) {"
+        echo "    statement { predicate }"
+        echo "  }"
+        echo "}"

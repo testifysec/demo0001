@@ -1,0 +1,41 @@
+# Keys (except example keys)
+keys/*.pem
+!keys/example-*.pem
+
+# Attestations
+attestations/*.json
+
+# Build artifacts
+conda-bld/
+build/
+dist/
+*.tar.bz2
+*.conda
+
+# SBOM files
+sbom*.json
+sbom*.xml
+
+# Signed policies
+policies/*-signed.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
