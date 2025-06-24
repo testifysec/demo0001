@@ -82,7 +82,7 @@ jobs:
       uses: testifysec/witness-run-action@v0.3.0
       with:
         step: build-${{ env.RECIPE_NAME }}
-        attestations: "git github environment"
+        attestations: "git github environment system-packages secretscan slsa"
         command: ./build-conda-package.sh ${{ matrix.recipe }}
         enable-sigstore: true
         enable-archivista: true
@@ -91,6 +91,7 @@ jobs:
           Authorization: Token ${{ secrets.PLATFORM_API_TOKEN }}
         trace: false
         product-include-glob: "**"
+        slsa-export: true
         
     - name: Upload package
       uses: actions/upload-artifact@v4
@@ -123,7 +124,7 @@ jobs:
         echo "### 🔒 Security Features"
         echo ""
         echo "- **Signing**: Sigstore ephemeral keys (OIDC-based)"
-        echo "- **Attestations**: git, github, environment"
+        echo "- **Attestations**: git, github, environment, system-packages, secretscan, slsa"
         echo "- **Storage**: TestifySec Platform (private instance)"
         echo "- **Compliance**: SLSA Level 3"
         echo ""
@@ -133,6 +134,9 @@ jobs:
         echo "- 📍 **Git**: Repository state and commit hash"
         echo "- 🏭 **GitHub**: Workflow run metadata"
         echo "- 🖥️ **Environment**: Build host details"
+        echo "- 📦 **System Packages**: Installed OS packages"
+        echo "- 🔐 **Secret Scan**: No secrets in outputs"
+        echo "- 📋 **SLSA**: Provenance predicate exported"
         echo ""
         echo "### 📡 Next Steps"
         echo ""
