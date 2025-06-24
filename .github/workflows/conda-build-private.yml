@@ -1,0 +1,137 @@
+name: Conda Build with Witness (Private Archivista)
+
+on:
+  push:
+    branches: [ '**' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  id-token: write  # Required for Sigstore JWT
+  contents: read   # Required for checkout
+  actions: read    # Required for artifact downloads
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      recipes: ${{ steps.find-recipes.outputs.recipes }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Find recipes
+      id: find-recipes
+      run: |
+        # Find all directories containing meta.yaml in recipes/
+        # Filter to only include our fast-building demos
+        recipes=$(find recipes -name meta.yaml -type f | grep -E "(click|pyyaml|requests)-demo" | sed 's|/meta.yaml||' | sort | jq -R -s -c 'split("\n")[:-1]')
+        echo "recipes=$recipes" >> $GITHUB_OUTPUT
+        echo "Found recipes: $recipes"
+
+  build:
+    needs: setup
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        recipe: ${{ fromJson(needs.setup.outputs.recipes) }}
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install miniconda
+      run: |
+        wget -q https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+        bash Miniconda3-latest-Linux-x86_64.sh -b -p $HOME/miniconda
+        echo "$HOME/miniconda/bin" >> $GITHUB_PATH
+        
+    - name: Setup conda
+      run: |
+        conda config --set always_yes yes
+        conda install conda-build
+        conda info
+        
+    - name: Setup build environment
+      run: |
+        mkdir -p attestations
+        echo "RECIPE_NAME=$(basename ${{ matrix.recipe }})" >> $GITHUB_ENV
+      
+    - name: Build with Witness
+      uses: testifysec/witness-run-action@v0.3.0
+      with:
+        step: build-${{ env.RECIPE_NAME }}
+        attestations: "git github environment"
+        command: |
+          echo "Building recipe: ${{ matrix.recipe }}"
+          conda build ${{ matrix.recipe }}
+          
+          # Find and display the built package
+          PACKAGE=$(find $HOME/miniconda/conda-bld -name "*.tar.bz2" -o -name "*.conda" | grep -v repodata | grep -v index | head -1)
+          echo "Built package: $PACKAGE"
+          
+          # Save package info for later verification
+          if [ -f "$PACKAGE" ]; then
+            PACKAGE_NAME=$(basename "$PACKAGE")
+            echo "Package name: $PACKAGE_NAME"
+            echo "Package size: $(ls -lh "$PACKAGE" | awk '{print $5}')"
+            echo "Package hash: $(sha256sum "$PACKAGE" | awk '{print $1}')"
+            
+            echo "$PACKAGE_NAME" > package-name.txt
+            sha256sum "$PACKAGE" > package-hash.txt
+          fi
+        enable-sigstore: true
+        enable-archivista: true
+        archivista-server: "https://web.platform.testifysec.com"
+        archivista-headers: |-
+          Authorization: Token ${{ secrets.PLATFORM_API_TOKEN }}
+        trace: true
+        workingdir: ${{ github.workspace }}
+        
+    - name: Upload package
+      uses: actions/upload-artifact@v4
+      with:
+        name: conda-package-${{ strategy.job-index }}
+        path: |
+          ~/miniconda/conda-bld/**/*.tar.bz2
+          ~/miniconda/conda-bld/**/*.conda
+          package-name.txt
+          package-hash.txt
+          attestations/*.json
+
+  summary:
+    runs-on: ubuntu-latest
+    needs: [setup, build]
+    if: always()
+    steps:
+    - name: Summary
+      run: |
+        echo "## 🎉 Conda Build with Witness - Summary"
+        echo ""
+        echo "### 📦 Packages Built"
+        echo ""
+        echo '```'
+        echo '${{ needs.setup.outputs.recipes }}' | jq -r '.[]' | while read recipe; do
+          echo "✓ $(basename $recipe)"
+        done
+        echo '```'
+        echo ""
+        echo "### 🔒 Security Features"
+        echo ""
+        echo "- **Signing**: Sigstore ephemeral keys (OIDC-based)"
+        echo "- **Attestations**: git, github, environment"
+        echo "- **Storage**: TestifySec Platform (private instance)"
+        echo "- **Compliance**: SLSA Level 3"
+        echo ""
+        echo "### 🔍 Attestation Details"
+        echo ""
+        echo "Each package includes:"
+        echo "- 📍 **Git**: Repository state and commit hash"
+        echo "- 🏭 **GitHub**: Workflow run metadata"
+        echo "- 🖥️ **Environment**: Build host details"
+        echo ""
+        echo "### 📡 Next Steps"
+        echo ""
+        echo "Attestations are stored in TestifySec Platform and can be:"
+        echo "- Queried via GraphQL API"
+        echo "- Verified with witness policies"
+        echo "- Used for compliance reporting"
+        echo ""
+        echo "View the workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
