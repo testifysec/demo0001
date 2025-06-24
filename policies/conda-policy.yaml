@@ -1,0 +1,32 @@
+expires: "2030-01-01T00:00:00Z"
+steps:
+  - name: "conda-build"
+    attestations:
+      - type: "https://witness.dev/attestations/command-run/v0.1"
+        regopolicies:
+          - name: "must-use-conda-build"
+            module: |
+              package commandrun
+              
+              default allow = false
+              
+              allow {
+                input.cmd[_] == "conda"
+                input.cmd[_] == "build"
+              }
+      - type: "https://witness.dev/attestations/environment/v0.1"
+      - type: "https://witness.dev/attestations/git/v0.1"
+      - type: "https://witness.dev/attestations/github/v0.1"
+      - type: "https://witness.dev/attestations/sbom/v0.1"
+publickeys:
+  - keyid: "testkey"
+    key: |
+      -----BEGIN PUBLIC KEY-----
+      MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA3iRnSc6Hu+Wcam0Wz7xU
+      8Xsicb52Ctj+gbElEahb9lkRQTLAwMvmEzY7PWULOU8lGONhcyQvw2w0+T3A1bGq
+      d4euFVEOg/FukF5rFjNWffq3jr2nMdBdaB9NcTU3TsGABpfsiM4I2LN6LbxvdzpxZ
+      MUhYjVIMJWrfgTofcw3hC1ZYCy9Fpfm9OPShDHREHbAZL/cEo6ZMvDE0Z1QyTUMX
+      O2JMPBnXgCYsHz4Vf3lsA1jf6BRssfMklgKQSgh9VJ+06rOJ8VqemqZ5MJ9NV0TA
+      LzTq4IncEz5n9660LG2vMFgcSECvdo8ULxz/lCFVQ+V4G8Ns3f7CrxMqa6Wx1ZV7
+      iQIDAQAB
+      -----END PUBLIC KEY-----

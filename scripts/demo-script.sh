@@ -58,7 +58,7 @@ pause
 print_step "Step 2: The Solution - Add Witness to your build"
 echo "Same conda build command, just wrapped with witness run:"
 echo ""
-run_command "witness run --step build --signer-file-key keys/demo-key.pem --attestations \"environment,git,sbom\" -- conda build recipes/numpy-demo/"
+run_command "witness run --step build --signer-file-key keys/test-key.pem --attestations \"environment,git,sbom\" -- conda build recipes/numpy-demo/"
 echo ""
 echo -e "${GREEN}✓ Build completed with signed attestations!${NC}"
 pause
@@ -68,10 +68,10 @@ print_step "Step 3: Examining the attestations"
 run_command "ls -la attestations/"
 echo ""
 echo "Let's look inside the attestation:"
-run_command "cat attestations/build-attestation.json | jq '.signatures[0].keyid'"
+run_command "cat attestations/numpy-attestation.json | jq '.signatures[0].keyid'"
 echo ""
 echo "Build environment captured:"
-run_command "cat attestations/build-attestation.json | jq '.predicate.attestations[] | select(.type == \"https://witness.dev/attestations/environment/v0.1\") | .attestation | {hostname, os, user}'"
+run_command "cat attestations/numpy-attestation.json | jq '.predicate.attestations[] | select(.type == \"https://witness.dev/attestations/environment/v0.1\") | .attestation | {hostname, os, user}'"
 pause
 
 # Step 4: Policy enforcement
@@ -80,7 +80,7 @@ echo "Create a policy that defines trusted builds:"
 run_command "cat policies/conda-build-policy.yaml | head -20"
 echo ""
 echo "Verify the build meets policy requirements:"
-run_command "witness verify --policy policies/conda-build-policy-signed.json --attestation attestations/build-attestation.json --publickey keys/demo-pub.pem"
+run_command "witness verify --policy policies/conda-policy-signed.json --attestation attestations/numpy-attestation.json --publickey keys/test-pub.pem"
 echo ""
 echo -e "${GREEN}✓ Build passed all policy checks!${NC}"
 pause
@@ -91,7 +91,7 @@ echo "For production, use hardware-backed keys:"
 echo ""
 echo -e "${BLUE}$ witness run --step build \\
     --signer-kms-ref awskms:///arn:aws:kms:us-east-1:123456:key/abc-def \\
-    --signer-file-key keys/demo-key.pem \\
+    --signer-file-key keys/test-key.pem \\
     -- conda build recipes/numpy-demo/${NC}"
 echo ""
 echo "This provides:"
@@ -103,7 +103,7 @@ pause
 # Step 6: SBOM Generation
 print_step "Step 6: Automatic SBOM generation"
 echo "Witness can generate SBOMs during build:"
-run_command "witness run --step build --attestor-sbom-export sbom-cyclonedx.json --signer-file-key keys/demo-key.pem -- echo 'Building with SBOM...'"
+run_command "witness run --step build --attestor-sbom-export sbom-cyclonedx.json --signer-file-key keys/test-key.pem -- echo 'Building with SBOM...'"
 echo ""
 echo "SBOM contains all dependencies:"
 echo '{"components": [{"name": "numpy"}, {"name": "python"}, {"name": "cython"}]}'
@@ -119,7 +119,7 @@ echo ""
 echo "Package: numpy-1.24.3-py39_0"
 echo -e "${GREEN}✓ Attestation found${NC}"
 echo -e "${GREEN}✓ Signed by: Anaconda, Inc. (AWS KMS)${NC}"
-echo -e "${GREEN}✓ Built: $(date '+%Y-%m-%d %H:%M CDT')${NC}"
+echo -e "${GREEN}✓ Built: $(date '+%Y-%m-%d %H:%M')${NC}"
 echo -e "${GREEN}✓ SLSA Level: 3${NC}"
 echo -e "${GREEN}✓ No vulnerabilities in SBOM${NC}"
 echo ""

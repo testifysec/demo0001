@@ -1,0 +1,42 @@
+package:
+  name: numpy
+  version: "1.24.3"
+
+source:
+  url: https://pypi.io/packages/source/n/numpy/numpy-1.24.3.tar.gz
+  sha256: ab344f1bf21f140adab8e47fdbc7c35a477dc01408791f8ba00d018dd0bc5155
+
+build:
+  number: 0
+  script: |
+    {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+  host:
+    - python
+    - pip
+    - cython
+    - setuptools
+  run:
+    - python
+
+test:
+  imports:
+    - numpy
+  commands:
+    - python -c "import numpy; print(numpy.__version__)"
+
+about:
+  home: https://numpy.org/
+  license: BSD-3-Clause
+  license_file: LICENSE.txt
+  summary: The fundamental package for scientific computing with Python
+  description: |
+    NumPy is the fundamental package for scientific computing with Python.
+    It contains among other things a powerful N-dimensional array object,
+    sophisticated (broadcasting) functions, tools for integrating C/C++
+    and Fortran code, and useful linear algebra, Fourier transform, and
+    random number capabilities.

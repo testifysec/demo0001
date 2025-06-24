@@ -1,0 +1,35 @@
+package:
+  name: pyyaml
+  version: "6.0.1"
+
+source:
+  url: https://pypi.io/packages/source/P/PyYAML/PyYAML-6.0.1.tar.gz
+  sha256: bfdf460b1736c775f2ba9f6a92bca30bc2095067b8a9d77876d1fad6cc3b4a43
+
+build:
+  number: 0
+  script: {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+  host:
+    - python
+    - pip
+    - cython
+  run:
+    - python
+
+test:
+  imports:
+    - yaml
+  commands:
+    - python -c "import yaml; print(yaml.__version__)"
+
+about:
+  home: https://pyyaml.org/
+  license: MIT
+  license_file: LICENSE
+  summary: YAML parser and emitter for Python
+  description: |
+    PyYAML is a YAML parser and emitter for Python.

@@ -1,0 +1,44 @@
+package:
+  name: scipy
+  version: "1.11.1"
+
+source:
+  url: https://pypi.io/packages/source/s/scipy/scipy-1.11.1.tar.gz
+  sha256: fb5b492fa035334fd249f0973cc79ecad8b09c604b42a127a677b45a9a3d4289
+
+build:
+  number: 0
+  script: |
+    {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+    - {{ compiler('fortran') }}
+  host:
+    - python
+    - pip
+    - setuptools
+    - cython
+    - numpy
+    - pybind11
+  run:
+    - python
+    - numpy >=1.21.6
+
+test:
+  imports:
+    - scipy
+  commands:
+    - python -c "import scipy; print(scipy.__version__)"
+
+about:
+  home: https://scipy.org/
+  license: BSD-3-Clause
+  license_file: LICENSE.txt
+  summary: Scientific Library for Python
+  description: |
+    SciPy is open-source software for mathematics, science, and engineering.
+    It includes modules for statistics, optimization, integration, linear algebra,
+    Fourier transforms, signal and image processing, ODE solvers, and more.

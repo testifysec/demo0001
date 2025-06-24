@@ -1,0 +1,45 @@
+package:
+  name: pandas
+  version: "2.0.3"
+
+source:
+  url: https://pypi.io/packages/source/p/pandas/pandas-2.0.3.tar.gz
+  sha256: c02f372a88e0d17f36d3093a644c73cfc1788e876a7c4bcb4020a77512e2043c
+
+build:
+  number: 0
+  script: |
+    {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv
+
+requirements:
+  build:
+    - {{ compiler('c') }}
+    - {{ compiler('cxx') }}
+  host:
+    - python
+    - pip
+    - setuptools
+    - cython
+    - numpy
+  run:
+    - python
+    - numpy >=1.20.3
+    - python-dateutil >=2.8.2
+    - pytz >=2020.1
+
+test:
+  imports:
+    - pandas
+  commands:
+    - python -c "import pandas; print(pandas.__version__)"
+
+about:
+  home: https://pandas.pydata.org/
+  license: BSD-3-Clause
+  license_file: LICENSE
+  summary: Powerful data structures for data analysis, time series, and statistics
+  description: |
+    pandas is a Python package that provides fast, flexible, and expressive data
+    structures designed to make working with "relational" or "labeled" data both
+    easy and intuitive. It aims to be the fundamental high-level building block
+    for doing practical, real world data analysis in Python.

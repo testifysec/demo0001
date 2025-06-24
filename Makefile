@@ -4,10 +4,10 @@
 WITNESS := witness
 CONDA := conda
 PYTHON := python
-KEY_PATH := keys/demo-key.pem
-PUB_KEY_PATH := keys/demo-pub.pem
-POLICY_PATH := policies/conda-build-policy.yaml
-POLICY_SIGNED := policies/conda-build-policy-signed.json
+KEY_PATH := keys/test-key.pem
+PUB_KEY_PATH := keys/test-pub.pem
+POLICY_PATH := policies/conda-policy.yaml
+POLICY_SIGNED := policies/conda-policy-signed.json
 
 # AWS KMS Configuration (will be set during demo)
 KMS_KEY_ARN ?= 
@@ -23,10 +23,17 @@ help:
 	@echo "Conda + Witness Demo Commands:"
 	@echo "  make setup          - Initial setup (keys, directories)"
 	@echo "  make build-numpy    - Build numpy package with attestations"
+	@echo "  make build-pandas   - Build pandas package with attestations"
+	@echo "  make build-scipy    - Build scipy package with attestations"
+	@echo "  make build-click    - Build click package with attestations (fast!)"
+	@echo "  make build-pyyaml   - Build pyyaml package with attestations"
+	@echo "  make build-requests - Build requests package with attestations"
+	@echo "  make build-all      - Build all packages"
 	@echo "  make verify-numpy   - Verify numpy package attestations"
 	@echo "  make show-sbom      - Display generated SBOM"
 	@echo "  make query-api      - Query Archivista for attestations"
 	@echo "  make demo           - Run full demo sequence"
+	@echo "  make list-recipes   - List available recipes"
 	@echo "  make clean          - Clean generated files"
 
 .PHONY: setup
@@ -40,57 +47,98 @@ setup:
 	fi
 	@echo "$(GREEN)Setup complete!$(NC)"
 
-.PHONY: create-recipe
-create-recipe:
-	@echo "$(GREEN)Creating simple numpy conda recipe...$(NC)"
-	@mkdir -p recipes/numpy-demo
-	@cat > recipes/numpy-demo/meta.yaml <<EOF
-package:
-  name: numpy-demo
-  version: "1.24.3"
-
-source:
-  url: https://pypi.io/packages/source/n/numpy/numpy-1.24.3.tar.gz
-  sha256: ab344f1bf21f140adab8e47fdbc7c35a477dc01408791f8ba00d018dd0bc5155
-
-build:
-  number: 0
-
-requirements:
-  build:
-    - python
-    - pip
-    - cython
-  run:
-    - python
-
-test:
-  imports:
-    - numpy
-
-about:
-  home: https://numpy.org/
-  license: BSD-3-Clause
-  summary: Demo numpy build with attestations
-EOF
+.PHONY: list-recipes
+list-recipes:
+	@echo "$(GREEN)Available recipes:$(NC)"
+	@find recipes -name meta.yaml -type f | sed 's|/meta.yaml||' | sort
 
 .PHONY: build-numpy
-build-numpy: setup create-recipe
-	@echo "$(YELLOW)=== Step 1: Traditional conda build ===$(NC)"
-	@echo "$ conda build recipes/numpy-demo/"
-	@sleep 2
-	@echo "$(YELLOW)=== Step 2: Same build, wrapped with Witness ===$(NC)"
-	@echo "$ witness run --step build --attestations \"environment,git,sbom\" \\"
-	@echo "    --signer-file-key $(KEY_PATH) \\"
-	@echo "    -- conda build recipes/numpy-demo/"
+build-numpy: setup
+	@echo "$(YELLOW)=== Building numpy with Witness ===$(NC)"
 	@$(WITNESS) run \
 		--step build \
-		--attestations "environment,git,sbom" \
-		--signer-file-key $(KEY_PATH) \
-		--outfile attestations/build-attestation.json \
-		-- echo "[DEMO] Simulating conda build recipes/numpy-demo/"
+		--attestations "environment,git,secretscan" \
+		--signer-file-key-path $(KEY_PATH) \
+		--enable-archivista \
+		--archivista-server "https://archivista.testifysec.io" \
+		--outfile attestations/numpy-attestation.json \
+		-- conda build recipes/numpy-demo
 	@echo "$(GREEN)✓ Build completed with attestations!$(NC)"
-	@echo "$(GREEN)✓ Attestation saved to: attestations/build-attestation.json$(NC)"
+	@echo "$(GREEN)✓ Attestation saved to: attestations/numpy-attestation.json$(NC)"
+
+.PHONY: build-pandas
+build-pandas: setup
+	@echo "$(YELLOW)=== Building pandas with Witness ===$(NC)"
+	@$(WITNESS) run \
+		--step build \
+		--attestations "environment,git,secretscan" \
+		--signer-file-key-path $(KEY_PATH) \
+		--enable-archivista \
+		--archivista-server "https://archivista.testifysec.io" \
+		--outfile attestations/pandas-attestation.json \
+		-- conda build recipes/pandas-demo
+	@echo "$(GREEN)✓ Build completed with attestations!$(NC)"
+	@echo "$(GREEN)✓ Attestation saved to: attestations/pandas-attestation.json$(NC)"
+
+.PHONY: build-scipy
+build-scipy: setup
+	@echo "$(YELLOW)=== Building scipy with Witness ===$(NC)"
+	@$(WITNESS) run \
+		--step build \
+		--attestations "environment,git,secretscan" \
+		--signer-file-key-path $(KEY_PATH) \
+		--enable-archivista \
+		--archivista-server "https://archivista.testifysec.io" \
+		--outfile attestations/scipy-attestation.json \
+		-- conda build recipes/scipy-demo
+	@echo "$(GREEN)✓ Build completed with attestations!$(NC)"
+	@echo "$(GREEN)✓ Attestation saved to: attestations/scipy-attestation.json$(NC)"
+
+.PHONY: build-click
+build-click: setup
+	@echo "$(YELLOW)=== Building click with Witness ===$(NC)"
+	@$(WITNESS) run \
+		--step build \
+		--attestations "environment,git,secretscan" \
+		--signer-file-key-path $(KEY_PATH) \
+		--enable-archivista \
+		--archivista-server "https://archivista.testifysec.io" \
+		--outfile attestations/click-attestation.json \
+		-- conda build recipes/click-demo
+	@echo "$(GREEN)✓ Build completed with attestations!$(NC)"
+	@echo "$(GREEN)✓ Attestation saved to: attestations/click-attestation.json$(NC)"
+
+.PHONY: build-pyyaml
+build-pyyaml: setup
+	@echo "$(YELLOW)=== Building pyyaml with Witness ===$(NC)"
+	@$(WITNESS) run \
+		--step build \
+		--attestations "environment,git,secretscan" \
+		--signer-file-key-path $(KEY_PATH) \
+		--enable-archivista \
+		--archivista-server "https://archivista.testifysec.io" \
+		--outfile attestations/pyyaml-attestation.json \
+		-- conda build recipes/pyyaml-demo
+	@echo "$(GREEN)✓ Build completed with attestations!$(NC)"
+	@echo "$(GREEN)✓ Attestation saved to: attestations/pyyaml-attestation.json$(NC)"
+
+.PHONY: build-requests
+build-requests: setup
+	@echo "$(YELLOW)=== Building requests with Witness ===$(NC)"
+	@$(WITNESS) run \
+		--step build \
+		--attestations "environment,git,secretscan" \
+		--signer-file-key-path $(KEY_PATH) \
+		--enable-archivista \
+		--archivista-server "https://archivista.testifysec.io" \
+		--outfile attestations/requests-attestation.json \
+		-- conda build recipes/requests-demo
+	@echo "$(GREEN)✓ Build completed with attestations!$(NC)"
+	@echo "$(GREEN)✓ Attestation saved to: attestations/requests-attestation.json$(NC)"
+
+.PHONY: build-all
+build-all: build-click build-pyyaml build-requests
+	@echo "$(GREEN)✓ All packages built successfully!$(NC)"
 
 .PHONY: build-with-kms
 build-with-kms: setup create-recipe
@@ -101,9 +149,11 @@ build-with-kms: setup create-recipe
 	@echo "$(YELLOW)=== Building with AWS KMS signing ===$(NC)"
 	@$(WITNESS) run \
 		--step build \
-		--attestations "environment,git,sbom" \
+		--attestations "environment,git,secretscan" \
 		--signer-kms-ref awskms:///$(KMS_KEY_ARN) \
-		--signer-file-key $(KEY_PATH) \
+		--signer-file-key-path $(KEY_PATH) \
+		--enable-archivista \
+		--archivista-server "https://archivista.testifysec.io" \
 		--outfile attestations/build-attestation-kms.json \
 		-- echo "[DEMO] Simulating conda build with KMS signing"
 	@echo "$(GREEN)✓ Build completed with multi-signature (local + KMS)!$(NC)"
@@ -111,45 +161,43 @@ build-with-kms: setup create-recipe
 .PHONY: create-policy
 create-policy:
 	@echo "$(GREEN)Creating Anaconda build policy...$(NC)"
-	@cat > $(POLICY_PATH) <<EOF
-expires: "2030-01-01T00:00:00Z"
-steps:
-  - name: "build"
-    attestations:
-      - type: "https://witness.dev/attestations/command-run/v0.1"
-        regopolicies:
-          - name: "must-be-conda-build"
-            module: |
-              package commandrun
-              
-              default allow = false
-              
-              allow {
-                input.cmd[0] == "echo"
-                contains(input.cmd[1], "conda build")
-              }
-      - type: "https://witness.dev/attestations/environment/v0.1"
-      - type: "https://witness.dev/attestations/git/v0.1"
-        regopolicies:
-          - name: "must-be-from-main"
-            module: |
-              package git
-              
-              default allow = false
-              
-              allow {
-                input.status.HEAD == "main"
-              }
-              
-              # For demo, also allow if no git repo
-              allow {
-                input.error != null
-              }
-publickeys:
-  - keyid: "demo-key"
-    key: |
-$(sed 's/^/      /' $(PUB_KEY_PATH))
-EOF
+	@printf 'expires: "2030-01-01T00:00:00Z"\n' > $(POLICY_PATH)
+	@printf 'steps:\n' >> $(POLICY_PATH)
+	@printf '  - name: "build"\n' >> $(POLICY_PATH)
+	@printf '    attestations:\n' >> $(POLICY_PATH)
+	@printf '      - type: "https://witness.dev/attestations/command-run/v0.1"\n' >> $(POLICY_PATH)
+	@printf '        regopolicies:\n' >> $(POLICY_PATH)
+	@printf '          - name: "must-be-conda-build"\n' >> $(POLICY_PATH)
+	@printf '            module: |\n' >> $(POLICY_PATH)
+	@printf '              package commandrun\n' >> $(POLICY_PATH)
+	@printf '              \n' >> $(POLICY_PATH)
+	@printf '              default allow = false\n' >> $(POLICY_PATH)
+	@printf '              \n' >> $(POLICY_PATH)
+	@printf '              allow {\n' >> $(POLICY_PATH)
+	@printf '                input.cmd[0] == "conda"\n' >> $(POLICY_PATH)
+	@printf '                input.cmd[1] == "build"\n' >> $(POLICY_PATH)
+	@printf '              }\n' >> $(POLICY_PATH)
+	@printf '      - type: "https://witness.dev/attestations/environment/v0.1"\n' >> $(POLICY_PATH)
+	@printf '      - type: "https://witness.dev/attestations/git/v0.1"\n' >> $(POLICY_PATH)
+	@printf '        regopolicies:\n' >> $(POLICY_PATH)
+	@printf '          - name: "must-be-from-main"\n' >> $(POLICY_PATH)
+	@printf '            module: |\n' >> $(POLICY_PATH)
+	@printf '              package git\n' >> $(POLICY_PATH)
+	@printf '              \n' >> $(POLICY_PATH)
+	@printf '              default allow = false\n' >> $(POLICY_PATH)
+	@printf '              \n' >> $(POLICY_PATH)
+	@printf '              allow {\n' >> $(POLICY_PATH)
+	@printf '                input.status.HEAD == "main"\n' >> $(POLICY_PATH)
+	@printf '              }\n' >> $(POLICY_PATH)
+	@printf '              \n' >> $(POLICY_PATH)
+	@printf '              # For demo, also allow if no git repo\n' >> $(POLICY_PATH)
+	@printf '              allow {\n' >> $(POLICY_PATH)
+	@printf '                input.error != null\n' >> $(POLICY_PATH)
+	@printf '              }\n' >> $(POLICY_PATH)
+	@printf 'publickeys:\n' >> $(POLICY_PATH)
+	@printf '  - keyid: "testkey"\n' >> $(POLICY_PATH)
+	@printf '    key: |\n' >> $(POLICY_PATH)
+	@sed 's/^/      /' $(PUB_KEY_PATH) >> $(POLICY_PATH)
 	@echo "$(GREEN)Policy created at: $(POLICY_PATH)$(NC)"
 
 .PHONY: sign-policy
@@ -158,7 +206,7 @@ sign-policy: create-policy
 	@$(WITNESS) sign \
 		--infile $(POLICY_PATH) \
 		--outfile $(POLICY_SIGNED) \
-		--signer-file-key $(KEY_PATH)
+		--signer-file-key-path $(KEY_PATH)
 	@echo "$(GREEN)✓ Policy signed and saved to: $(POLICY_SIGNED)$(NC)"
 
 .PHONY: verify-numpy
@@ -168,20 +216,20 @@ verify-numpy: sign-policy
 	@echo "    --attestation attestations/build-attestation.json"
 	@$(WITNESS) verify \
 		--policy $(POLICY_SIGNED) \
-		--attestation attestations/build-attestation.json \
+		--attestation attestations/numpy-attestation.json \
 		--publickey $(PUB_KEY_PATH) || true
 	@echo "$(GREEN)✓ Verification complete!$(NC)"
 
 .PHONY: show-attestation
 show-attestation:
 	@echo "$(YELLOW)=== Attestation Contents ===$(NC)"
-	@if [ -f attestations/build-attestation.json ]; then \
+	@if [ -f attestations/numpy-attestation.json ]; then \
 		echo "Signatures:"; \
-		jq '.signatures[0].keyid' attestations/build-attestation.json; \
+		jq '.signatures[0].keyid' attestations/numpy-attestation.json; \
 		echo "\nPredicate Type:"; \
-		jq '.predicate._type' attestations/build-attestation.json; \
+		jq '.predicate._type' attestations/numpy-attestation.json; \
 		echo "\nCommand Run:"; \
-		jq '.predicate.attestations[] | select(.type == "https://witness.dev/attestations/command-run/v0.1") | .attestation.cmd' attestations/build-attestation.json 2>/dev/null || echo "N/A"; \
+		jq '.predicate.attestations[] | select(.type == "https://witness.dev/attestations/command-run/v0.1") | .attestation.cmd' attestations/numpy-attestation.json 2>/dev/null || echo "N/A"; \
 	else \
 		echo "$(RED)No attestation found. Run 'make build-numpy' first.$(NC)"; \
 	fi
@@ -204,7 +252,7 @@ simulate-verification:
 	@echo ""
 	@echo "Package: numpy-1.24.3-py39_0"
 	@echo "$(GREEN)✓ Attestation found$(NC)"
-	@echo "$(GREEN)✓ Signed by: Anaconda, Inc. (demo-key)$(NC)"
+	@echo "$(GREEN)✓ Signed by: Anaconda, Inc. (test-key)$(NC)"
 	@echo "$(GREEN)✓ Built: $(shell date '+%Y-%m-%d %H:%M')$(NC)"
 	@echo "$(GREEN)✓ SLSA Level: 3$(NC)"
 	@echo "$(GREEN)✓ Policy: All checks passed$(NC)"

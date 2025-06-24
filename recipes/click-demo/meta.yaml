@@ -1,0 +1,34 @@
+package:
+  name: click
+  version: "8.1.7"
+
+source:
+  url: https://pypi.io/packages/source/c/click/click-8.1.7.tar.gz
+  sha256: ca9853ad459e787e2192211578cc907e7594e294c7ccc834310722b41b9ca6de
+
+build:
+  number: 0
+  noarch: python
+  script: {{ PYTHON }} -m pip install . --no-deps --ignore-installed -vv
+
+requirements:
+  host:
+    - python >=3.7
+    - pip
+  run:
+    - python >=3.7
+
+test:
+  imports:
+    - click
+  commands:
+    - python -c "import click; print(click.__version__)"
+
+about:
+  home: https://click.palletsprojects.com/
+  license: BSD-3-Clause
+  license_file: LICENSE.rst
+  summary: Composable command line interface toolkit
+  description: |
+    Click is a Python package for creating beautiful command line interfaces
+    in a composable way with as little code as necessary.
