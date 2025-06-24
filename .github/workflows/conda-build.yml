@@ -61,10 +61,18 @@ jobs:
         attestations: "git github environment"
         command: |
           conda build ${{ matrix.recipe }}
+          
+          # Copy built package to working directory for attestation
+          PACKAGE=$(find $HOME/miniconda/conda-bld -name "*.tar.bz2" -o -name "*.conda" | grep -v repodata | grep -v index | head -1)
+          if [ -f "$PACKAGE" ]; then
+            cp "$PACKAGE" .
+            echo "Package copied to: $(basename "$PACKAGE")"
+          fi
         enable-sigstore: true
         enable-archivista: true
         archivista-server: "https://archivista.testifysec.io"
         trace: true
+        product-include-glob: "*.tar.bz2,*.conda,/home/runner/miniconda/conda-bld/**/*.tar.bz2,/home/runner/miniconda/conda-bld/**/*.conda"
         
     - name: Upload package
       uses: actions/upload-artifact@v4
