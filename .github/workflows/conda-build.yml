@@ -65,7 +65,6 @@ jobs:
         enable-archivista: true
         archivista-server: "https://archivista.testifysec.io"
         trace: true
-        workingdir: ${{ github.workspace }}
         
     - name: Upload package
       uses: actions/upload-artifact@v4
