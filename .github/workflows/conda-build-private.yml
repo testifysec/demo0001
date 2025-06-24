@@ -89,7 +89,7 @@ jobs:
         archivista-server: "https://web.platform.testifysec.com"
         archivista-headers: |-
           Authorization: Token ${{ secrets.PLATFORM_API_TOKEN }}
-        trace: true
+        trace: false
         
     - name: Upload package
       uses: actions/upload-artifact@v4
